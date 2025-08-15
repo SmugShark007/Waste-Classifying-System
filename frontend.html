@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>♻ Waste Classification & Disposal Guide</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styling.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="hero-banner">
+        <div class="hero-content">
+            <h1>♻ Waste Classification & Disposal Guide</h1>
+            <p class="tagline">"Every Waste Has Its Place"</p>
+            <div class="eco-icons">
+                <span title="Reduce">♻️</span>
+                <span title="Reuse">🔄</span>
+                <span title="Recycle">🌱</span>
+                <span title="Save Earth">🌍</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="upload-section">
+            <h2>🔍 Identify Your Waste Type</h2>
+            <p class="subtitle">Help us create a cleaner future by properly sorting your waste</p>
+            
+            <div class="upload-box">
+                <div class="upload-icon">📸</div>
+                <input type="file" id="fileInput" accept="image/*">
+                <label for="fileInput">Choose an image or drag it here</label>
+                <button onclick="uploadImage()">Analyze Waste Type</button>
+            </div>
+        </div>
+        
+        <div class="waste-categories">
+            <div class="category">
+                <span class="icon">🔋</span>
+                <h3>Battery</h3>
+            </div>
+            <div class="category">
+                <span class="icon">🌱</span>
+                <h3>Biological</h3>
+            </div>
+            <div class="category">
+                <span class="icon">📦</span>
+                <h3>Cardboard</h3>
+            </div>
+            <div class="category">
+                <span class="icon">👕</span>
+                <h3>Clothes</h3>
+            </div>
+            <div class="category">
+                <span class="icon">🥛</span>
+                <h3>Glass</h3>
+            </div>
+            <div class="category">
+                <span class="icon">⚙️</span>
+                <h3>Metal</h3>
+            </div>
+            <div class="category">
+                <span class="icon">📄</span>
+                <h3>Paper</h3>
+            </div>
+            <div class="category">
+                <span class="icon">♳</span>
+                <h3>Plastic</h3>
+            </div>
+            <div class="category">
+                <span class="icon">👟</span>
+                <h3>Shoes</h3>
+            </div>
+            <div class="category">
+                <span class="icon">🗑️</span>
+                <h3>Trash</h3>
+            </div>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <p>🌱 Together for a Sustainable Future</p>
+            <p class="eco-fact">"Did you know? Recycling one aluminum can saves enough energy to run a TV for 3 hours!"</p>
+            <div class="footer-icons">
+                <span>♻️</span>
+                <span>🌍</span>
+                <span>💚</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function uploadImage() {
+            const fileInput = document.getElementById("fileInput");
+            const result = document.getElementById("result");
+            
+            if (fileInput.files.length === 0) {
+                alert("Please select an image.");
+                return;
+            }
+
+            // Show loading state
+            result.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing your waste image...</p>
+                </div>
+            `;
+
+            // Show image preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.createElement('img');
+                preview.src = e.target.result;
+                preview.className = 'preview-image';
+                result.appendChild(preview);
+            }
+            reader.readAsDataURL(fileInput.files[0]);
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            fetch("/predict", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    result.innerHTML = `
+                        <div class="error-message">
+                            <span>❌</span>
+                            <p>${data.error}</p>
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="prediction-result">
+                            <div class="result-header">
+                                <h2>📋 Analysis Results</h2>
+                                <div class="confidence-badge">
+                                    ${data.confidence}% confident
+                                </div>
+                            </div>
+                            
+                            <div class="result-grid">
+                                <div class="result-image">
+                                    <img src="${reader.result}" alt="Analyzed waste">
+                                </div>
+                                
+                                <div class="result-details">
+                                    <div class="prediction-type">
+                                        <h3>Type: ${data.prediction}</h3>
+                                        <p class="explanation">${data.explanation}</p>
+                                    </div>
+                                    
+                                    <div class="suggestion-box">
+                                        <h4>💡 Disposal Suggestion:</h4>
+                                        <p>${data.suggestion}</p>
+                                    </div>
+                                    
+                                    <div class="probabilities">
+                                        <h4>📊 Other Possibilities:</h4>
+                                        <div class="prob-bars">
+                                            ${Object.entries(data.probabilities)
+                                                .sort((a, b) => b[1] - a[1])
+                                                .map(([label, prob]) => `
+                                                    <div class="prob-item">
+                                                        <span class="prob-label">${label}</span>
+                                                        <div class="prob-bar">
+                                                            <div class="prob-fill" style="width: ${prob}%"></div>
+                                                            <span class="prob-value">${prob.toFixed(1)}%</span>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(err => {
+                result.innerHTML = `
+                    <div class="error-message">
+                        <span>❌</span>
+                        <p>Error: ${err.message}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // Add drag and drop support
+        const uploadBox = document.querySelector('.upload-box');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadBox.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadBox.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadBox.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            uploadBox.classList.add('drag-active');
+        }
+
+        function unhighlight(e) {
+            uploadBox.classList.remove('drag-active');
+        }
+
+        uploadBox.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            document.getElementById('fileInput').files = files;
+            uploadImage();
+        }
+    </script>
+</body>
+</html>
